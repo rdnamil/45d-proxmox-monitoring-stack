@@ -8,10 +8,11 @@ To be done in the VM
 
 ## Prerequisites
 
-When booting the VM copy the ssh key from the proxmox nodes to the VM
+When booting the VM copy the ssh key from the VM to all of the Proxmox nodes
 
 ```bash
-ssh-copy-id root@IP
+ssh-keygen
+ssh-copy-id root@<PVE IP>
 ```
 
 ### Proxmox nodes
@@ -53,7 +54,7 @@ cp inventories/local/group_vars/all/vault.yml.example inventories/local/group_va
 cp inventories/local/hosts.yml.example inventories/local/hosts.yml
 ```
 
-### 3. Edit the vault
+### 3. Edit the config files
 
 Add the Prometheus API token value you saved earlier:
 
@@ -63,6 +64,11 @@ vim inventories/local/group_vars/all/vault.yml
 
 ```yaml
 vault_pve_token_value: "5f9f61a5-874f-4bbb-8eb7-07d926bee8idn"
+```
+
+Add your email settings:
+```bash
+vim inventories/local/group_vars/all/main.yml
 ```
 
 ### 4. Edit the inventory
@@ -91,3 +97,5 @@ docker ps
 ```
 
 All monitoring containers should be up and running.
+
+> _**NOTE:_** the config files can all be found in the monitoring root (ex. /opt/monitoring/prometheus/prom.yml)
