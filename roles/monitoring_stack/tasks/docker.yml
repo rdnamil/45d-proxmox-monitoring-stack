@@ -1,4 +1,4 @@
-- name: Remove conflicting Docker packages
+- name: Remove conflicting Docker packages (Debian family)
   ansible.builtin.apt:
     name:
       - docker.io
@@ -11,30 +11,51 @@
     state: absent
     purge: true
   ignore_errors: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Remove conflicting Docker packages (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+  ignore_errors: true
+  when: ansible_facts['os_family'] == 'RedHat'
+
+# ---------- Debian family (Ubuntu, Debian, Proxmox VE) ----------
 
 - name: Ensure Docker apt keyring directory exists
   ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
     mode: "0755"
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Set Docker apt repo base (Debian-derivative vs Ubuntu-derivative)
+  ansible.builtin.set_fact:
+    docker_apt_repo_os: "{{ 'ubuntu' if ansible_facts['distribution'] == 'Ubuntu' else 'debian' }}"
+  when: ansible_facts['os_family'] == 'Debian'
 
 - name: Download Docker GPG key
   ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
+    url: "https://download.docker.com/linux/{{ docker_apt_repo_os }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: "0644"
+  when: ansible_facts['os_family'] == 'Debian'
 
 - name: Add Docker apt repository
   ansible.builtin.apt_repository:
     repo: >-
       deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }}
       signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/ubuntu
+      https://download.docker.com/linux/{{ docker_apt_repo_os }}
       {{ ansible_lsb.codename }} stable
     state: present
     filename: docker
+  when: ansible_facts['os_family'] == 'Debian'
 
-- name: Install Docker Engine and Compose plugin
+- name: Install Docker Engine and Compose plugin (Debian family)
   ansible.builtin.apt:
     name:
       - docker-ce
@@ -44,6 +65,41 @@
       - docker-compose-plugin
     state: present
     update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+# ---------- RedHat family (Rocky, RHEL, CentOS) ----------
+
+- name: Ensure dnf-plugins-core is installed
+  ansible.builtin.dnf:
+    name: dnf-plugins-core
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Import Docker GPG key
+  ansible.builtin.rpm_key:
+    key: https://download.docker.com/linux/centos/gpg
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Add Docker yum/dnf repository
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Install Docker Engine and Compose plugin (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+# ---------- Common ----------
 
 - name: Ensure Docker service is enabled and running
   ansible.builtin.service:

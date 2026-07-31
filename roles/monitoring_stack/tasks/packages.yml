@@ -1,16 +1,41 @@
-- name: Install base packages
+- name: Set base package list per OS family
+  ansible.builtin.set_fact:
+    base_packages: "{{ base_packages_map[ansible_facts['os_family']] }}"
+  vars:
+    base_packages_map:
+      Debian:
+        - curl
+        - wget
+        - vim
+        - jq
+        - ca-certificates
+        - gnupg
+        - lsb-release
+        - apt-transport-https
+        - software-properties-common
+        - net-tools
+        - unzip
+      RedHat:
+        - curl
+        - wget
+        - vim
+        - jq
+        - ca-certificates
+        - gnupg2
+        - net-tools
+        - unzip
+
+- name: Update package cache (Debian family)
   ansible.builtin.apt:
-    name:
-      - curl
-      - wget
-      - vim
-      - jq
-      - ca-certificates
-      - gnupg
-      - lsb-release
-      - apt-transport-https
-      - software-properties-common
-      - net-tools
-      - unzip
-    state: present
     update_cache: true
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Update package cache (RedHat family)
+  ansible.builtin.dnf:
+    update_cache: true
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install base packages
+  ansible.builtin.package:
+    name: "{{ base_packages }}"
+    state: present
