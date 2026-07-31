@@ -2,7 +2,6 @@
   hosts: localhost
   become: true
   gather_facts: true
-
   vars:
     monitoring_root: /opt/monitoring
     monitoring_repo_root: /opt/proxmox-monitoring-stack
@@ -19,9 +18,7 @@
       ansible.builtin.stat:
         path: "{{ monitoring_root }}/compose/docker-compose.yml"
       register: purge_compose_file
-      when:
-        - ansible_facts['os_family'] == 'Debian'
-        - purge_compose_dir.stat.exists
+      when: purge_compose_dir.stat.exists
 
     - name: Stop and remove monitoring stack if compose file exists
       ansible.builtin.command:
@@ -31,7 +28,6 @@
       failed_when: false
       changed_when: purge_compose_down.rc == 0
       when:
-        - ansible_facts['os_family'] == 'Debian'
         - purge_compose_dir.stat.exists
         - purge_compose_file.stat.exists
 
@@ -40,7 +36,7 @@
         path: "{{ monitoring_root }}"
         state: absent
 
-    - name: Remove Docker packages
+    - name: Remove Docker packages (Debian family)
       ansible.builtin.apt:
         name:
           - docker-ce
@@ -61,20 +57,45 @@
         update_cache: true
       when: ansible_facts['os_family'] == 'Debian'
 
+    - name: Remove Docker packages (RedHat family)
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - docker
+          - podman-docker
+          - containerd
+          - runc
+        state: absent
+        autoremove: true
+      when: ansible_facts['os_family'] == 'RedHat'
+
     - name: Remove Docker apt repository file
       ansible.builtin.file:
         path: /etc/apt/sources.list.d/docker.list
         state: absent
+      when: ansible_facts['os_family'] == 'Debian'
 
     - name: Remove Docker apt key
       ansible.builtin.file:
         path: /etc/apt/keyrings/docker.asc
         state: absent
+      when: ansible_facts['os_family'] == 'Debian'
 
     - name: Remove Docker apt keyring directory if empty
       ansible.builtin.file:
         path: /etc/apt/keyrings
         state: absent
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Remove Docker yum/dnf repository file
+      ansible.builtin.file:
+        path: /etc/yum.repos.d/docker-ce.repo
+        state: absent
+      when: ansible_facts['os_family'] == 'RedHat'
 
     - name: Optionally remove Docker data directory
       ansible.builtin.file:

@@ -8,6 +8,6 @@
 - name: Set Prometheus data directory ownership
   ansible.builtin.file:
     path: "{{ monitoring_root }}/prometheus/data"
-    owner: nobody
-    group: nogroup
+    owner: "65534"
+    group: "65534"
     recurse: true

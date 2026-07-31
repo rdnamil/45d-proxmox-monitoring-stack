@@ -98,4 +98,4 @@ docker ps
 
 All monitoring containers should be up and running.
 
-> _**NOTE:_** the config files can all be found in the monitoring root (ex. /opt/monitoring/prometheus/prom.yml)
+> _**NOTE:_** the config files can all be found in the monitoring root (ex. /etc/prometheus/prom.yml)
