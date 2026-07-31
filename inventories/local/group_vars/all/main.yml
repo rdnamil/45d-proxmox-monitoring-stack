@@ -1,4 +1,4 @@
-monitoring_root: /opt/monitoring
+monitoring_root: /etc
 
 prometheus_host_port: 9091
 
